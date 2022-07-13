@@ -273,3 +273,14 @@ resource "aws_ebs_volume" "ipfs2" {
   size              = var.ec2_ebs_volume_size
 }
 
+resource "aws_volume_attachment" "ipfs1" {
+  device_name = "/dev/sdh"
+  volume_id   = aws_ebs_volume.ipfs1.id
+  instance_id = aws_instance.ipfs1.id
+}
+
+resource "aws_volume_attachment" "ipfs2" {
+  device_name = "/dev/sdh"
+  volume_id   = aws_ebs_volume.ipfs2.id
+  instance_id = aws_instance.ipfs2.id
+}
