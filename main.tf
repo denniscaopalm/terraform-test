@@ -1,18 +1,18 @@
 terraform {
   backend "s3" {
     encrypt        = true
-    bucket         = "palmnft-main-terraform-remote-state-storage-s3"
-    region         = "eu-west-1"
-    key            = "master/palmnft-main-terraform/key"
-    dynamodb_table = "palmnft-main-terraform-state-lock-dynamo"
+    bucket         = var.state_s3_bucket
+    region         = var.state_region
+    key            = var.state_key
+    dynamodb_table = var.state_dynamodb_table
   }
 }
 
 provider "aws" {
-  region  = "eu-west-1"
+  region  = var.aws_region
   # Add the assume_role fifth
   assume_role {
-    role_arn     = "arn:aws:iam::735775673300:role/terraform"
+    role_arn     = aws_role_arn.terraform.arn
     session_name = "terraform"
   }
 }
@@ -20,12 +20,12 @@ provider "aws" {
 # Create this first
 resource "aws_kms_key" "palmnft-main-terraform-state-key" {
   description             = "Encryption key for TF state"
-  deletion_window_in_days = 10
+  deletion_window_in_days = var.state_aws_kms_key
   enable_key_rotation     = true
 }
 
 resource "aws_s3_bucket" "palmnft-main-terraform-state-storage-logging-s3" {
-  bucket = "palmnft-main-terraform-state-storage-logging-s3"
+  bucket = var.state_logging_s3_bucket
   acl    = "log-delivery-write"
 
   versioning {
@@ -44,7 +44,7 @@ resource "aws_s3_bucket" "palmnft-main-terraform-state-storage-logging-s3" {
 }
 
 resource "aws_s3_bucket" "palmnft-main-terraform-state-storage-s3" {
-  bucket = "palmnft-main-terraform-remote-state-storage-s3"
+  bucket = var.state_s3_bucket
   acl    = "private"
 
   versioning {
@@ -70,7 +70,7 @@ resource "aws_s3_bucket" "palmnft-main-terraform-state-storage-s3" {
     id      = "log"
     enabled = true
 
-    prefix = "tf_tfe/"
+    prefix = "terraform/"
 
     tags = {
       "rule"      = "log"
@@ -78,12 +78,12 @@ resource "aws_s3_bucket" "palmnft-main-terraform-state-storage-s3" {
     }
 
     transition {
-      days          = 30
+      days          = var.state_logging_bucket_onezoneia_days
       storage_class = "ONEZONE_IA"
     }
 
     transition {
-      days          = 60
+      days          = var.state_logging_bucket_glacier_days
       storage_class = "GLACIER"
     }
 
@@ -101,8 +101,8 @@ resource "aws_s3_bucket" "palmnft-main-terraform-state-storage-s3" {
 resource "aws_dynamodb_table" "dynamodb-terraform-state-lock" {
   name           = "palmnft-main-terraform-state-lock-dynamo"
   hash_key       = "LockID"
-  read_capacity  = 20
-  write_capacity = 20
+  read_capacity  = var.state_dynamodb_table_read_cap
+  write_capacity = var.state_dynamodb_table_write_cap
   point_in_time_recovery {
     enabled = true
   }
@@ -174,7 +174,7 @@ resource "aws_iam_role" "terraform" {
     "Effect": "Allow",
     "Action": "sts:AssumeRole",
     "Principal": {
-    "AWS": "arn:aws:iam::<account>:role/aws-reserved/sso.amazonaws.com/eu-west-1/AWSReservedSSO_AWSAdministratorAccess_<random>"
+    "AWS": "arn:aws:iam::<account>:role/aws-reserved/sso.amazonaws.com/{{$var.aws_region}}/AWSReservedSSO_AWSAdministratorAccess_<random>"
     }
   }
 }
@@ -189,35 +189,35 @@ resource "aws_iam_role_policy" "terraform" {
 
 resource "aws_instance" "ipfs1" {
 
-  ami                         = "ami-abcd1234"
+  ami                         = var.ec2_ami
   associate_public_ip_address = false
-  instance_type               = "t2.medium"
-  key_name                    = "ipfs-keypair-name"
-  availability_zone           = "eu-west-1a"
-  vpc_security_group_ids      = ["sg-ipfs-arn"]
-  subnet_id                   = "private-subnetid-1"
+  instance_type               = var.ec2_instance_size
+  key_name                    = var.ipfs_keypair_name
+  availability_zone           = var.ec2_az1
+  vpc_security_group_ids      = var.ec2_ipfs_vpc_security_group_ids
+  subnet_id                   = var.ec2_subnet1
 
 }
 
 resource "aws_instance" "ipfs2" {
 
-  ami                         = "ami-abcd1234"
+  ami                         = var.ec2_ami
   associate_public_ip_address = false
-  instance_type               = "t2.medium"
-  key_name                    = "ipfs-keypair-name"
-  availability_zone           = "eu-west-1b"
-  vpc_security_group_ids      = ["sg-ipfs-arn"]
-  subnet_id                   = "private-subnetid-2"
+  instance_type               = var.ec2_instance_size
+  key_name                    = var.ipfs_keypair_name
+  availability_zone           = var.ec2_az2
+  vpc_security_group_ids      = var.ec2_ipfs_vpc_security_group_ids
+  subnet_id                   = var.ec2_subnet2
 
 }
 
 resource "aws_ebs_volume" "ipfs1" {
-  availability_zone = "eu-west-1a"
-  size              = 100
+  availability_zone = var.ec2_az1
+  size              = var.ec2_ebs_volume_size
 }
 
 resource "aws_ebs_volume" "ipfs2" {
-  availability_zone = "eu-west-1a"
-  size              = 100
+  availability_zone = var.ec2_az2
+  size              = var.ec2_ebs_volume_size
 }
 
