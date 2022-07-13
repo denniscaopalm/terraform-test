@@ -187,6 +187,58 @@ resource "aws_iam_role_policy" "terraform" {
   policy = data.aws_iam_policy_document.terraform.json
 }
 
+
+## Process to reconcile:
+# Option 1) 
+#  Create new SG with Terraform and attach along side existing SG then manually remove old.
+#
+# Option 2)
+#  Use terraform import on the resource, ie. terraform import aws_security_group.ipfs <securitygroup id>.
+
+resource "aws_security_group" "ipfs" {
+  name        = "ipfs"
+  description = "Allow traffic"
+
+  ingress {
+    description = "Allow inbound traffic"
+    from_port   = 4001
+    to_port     = 4001
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks  = ["::/0"]
+  }
+
+  ingress {
+    description = "Allow inbound traffic"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks  = ["::/0"]
+  }
+  
+  ingress {
+    description = "Allow inbound traffic"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks  = ["::/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks  = ["::/0"]
+  }
+
+}
+
+
+
+
 resource "aws_instance" "ipfs1" {
 
   ami                         = var.ec2_ami
@@ -194,7 +246,7 @@ resource "aws_instance" "ipfs1" {
   instance_type               = var.ec2_instance_size
   key_name                    = var.ipfs_keypair_name
   availability_zone           = var.ec2_az1
-  vpc_security_group_ids      = var.ec2_ipfs_vpc_security_group_ids
+  vpc_security_group_ids      = [aws_security_group.ipfs.id]
   subnet_id                   = var.ec2_subnet1
 
 }
@@ -206,7 +258,7 @@ resource "aws_instance" "ipfs2" {
   instance_type               = var.ec2_instance_size
   key_name                    = var.ipfs_keypair_name
   availability_zone           = var.ec2_az2
-  vpc_security_group_ids      = var.ec2_ipfs_vpc_security_group_ids
+  vpc_security_group_ids      = [aws_security_group.ipfs.id]
   subnet_id                   = var.ec2_subnet2
 
 }

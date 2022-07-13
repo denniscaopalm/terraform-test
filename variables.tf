@@ -92,11 +92,6 @@ variable "ec2_subnet2" {
   default = "private-subnetid-2"
 }
 
-variable "ec2_ipfs_vpc_security_group_ids" {
-  type    = list(string)
-  default = ["sg-ipfs-arn"]
-}
-
 variable "ec2_ebs_volume_size" {
   type    = string
   default = "100"
