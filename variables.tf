@@ -50,6 +50,7 @@ variable "state_dynamodb_table_write_cap"
   default = "20"
 }
 
+
 # Systems
 
 variable "aws_region" {
